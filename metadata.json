@@ -1,0 +1,5 @@
+{
+  "name": "Saudi Visa Workflow Automator",
+  "description": "Automatically separate, classify, and sort Saudi Arabian visa application documents into a processing workflow using AI. Supports English and Vietnamese documents.",
+  "requestFramePermissions": []
+}

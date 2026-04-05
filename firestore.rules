@@ -1,0 +1,131 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, 'owner' | 'employee')
+    //   - createdAt: timestamp (required)
+    //   - notificationsEnabled: bool (optional)
+    //
+    // Collection: clients
+    // Document ID: {clientId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - normalizedName: string (required)
+    //   - visaType: string (required)
+    //   - status: string (required, 'incomplete' | 'ready' | 'submitted')
+    //   - lastUpdated: timestamp (required)
+    //   - createdBy: string (required)
+    //   - assignedTo: string (optional)
+    //   - email: string (optional)
+    //   - phone: string (optional)
+    //
+    // Subcollection: clients/{clientId}/documents
+    // Document ID: {docId}
+    // Fields:
+    //   - id: string (required)
+    //   - clientId: string (required)
+    //   - fileName: string (required)
+    //   - type: string (required)
+    //   - confidence: number (required)
+    //   - extractedInfo: map (optional)
+    //   - previewUrl: string (optional)
+    //   - uploadedAt: timestamp (required)
+    //   - uploadedBy: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' ||
+         (request.auth.token.email == "hongha.vu298@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isEmployee() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+
+    function isStaff() {
+      return isOwner() || isEmployee();
+    }
+
+    function isDocOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['owner', 'employee'] &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled is bool);
+    }
+
+    function isValidClient(data) {
+      return data.keys().hasAll(['id', 'name', 'normalizedName', 'visaType', 'status', 'lastUpdated', 'createdBy']) &&
+             data.id is string &&
+             data.name is string &&
+             data.normalizedName is string &&
+             data.visaType is string &&
+             data.status in ['incomplete', 'ready', 'submitted'] &&
+             data.lastUpdated is timestamp &&
+             data.createdBy is string &&
+             (!('assignedTo' in data) || data.assignedTo is string) &&
+             (!('email' in data) || data.email is string) &&
+             (!('phone' in data) || data.phone is string);
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['id', 'clientId', 'fileName', 'type', 'confidence', 'uploadedAt', 'uploadedBy']) &&
+             data.id is string &&
+             data.clientId is string &&
+             data.fileName is string &&
+             data.type is string &&
+             data.confidence is number &&
+             data.uploadedAt is timestamp &&
+             data.uploadedBy is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isDocOwner(uid) && isValidUser(request.resource.data) && (request.resource.data.role == 'employee' || isOwner());
+      allow update: if isAuthenticated() && (isDocOwner(uid) && request.resource.data.role == resource.data.role || isOwner()) && isValidUser(request.resource.data);
+      allow delete: if isOwner();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && isValidClient(request.resource.data);
+      allow update: if isStaff() && isValidClient(request.resource.data);
+      allow delete: if isOwner();
+
+      match /documents/{docId} {
+        allow read: if isStaff();
+        allow create: if isStaff() && isValidDocument(request.resource.data);
+        allow update: if isStaff() && isValidDocument(request.resource.data);
+        allow delete: if isOwner();
+      }
+    }
+  }
+}

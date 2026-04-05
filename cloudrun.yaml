@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: tcs-visa-workflow
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    spec:
+      containers:
+      - image: gcr.io/[PROJECT_ID]/tcs-visa-workflow
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: GEMINI_API_KEY
+          value: "[YOUR_GEMINI_API_KEY]"

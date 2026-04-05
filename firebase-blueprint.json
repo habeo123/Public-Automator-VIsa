@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user (Owner or Employee)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "employee"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "notificationsEnabled": { "type": "boolean" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Visa applicant profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "normalizedName": { "type": "string" },
+        "visaType": { "type": "string" },
+        "status": { "type": "string", "enum": ["incomplete", "ready", "submitted"] },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" }
+      },
+      "required": ["id", "name", "visaType"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Uploaded document metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "type": { "type": "string" },
+        "confidence": { "type": "number" },
+        "extractedInfo": { "type": "object" },
+        "previewUrl": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "uploadedBy": { "type": "string" }
+      },
+      "required": ["id", "clientId", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Client profiles"
+    },
+    "/clients/{clientId}/documents/{docId}": {
+      "schema": "Document",
+      "description": "Documents for a specific client"
+    }
+  }
+}
